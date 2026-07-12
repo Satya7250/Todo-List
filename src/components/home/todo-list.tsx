@@ -1,41 +1,89 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Check, PencilLine, Trash2, X } from "lucide-react";
 
-import { createTask, getTasks, toggleTask, type TaskRecord } from "@/actions/tasks";
+import {
+  createTask,
+  deleteTask,
+  getTasks,
+  toggleTask,
+  updateTask,
+  type TaskRecord,
+} from "@/actions/tasks";
 import { TaskInput } from "@/components/home/task-input";
 import { cn } from "@/lib/utils";
 
 export function TodoList() {
   const [todos, setTodos] = useState<TaskRecord[]>([]);
-  const [isPending, startTransition] = useTransition();
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     startTransition(async () => {
-      const tasksFromDb = await getTasks();
-      setTodos(tasksFromDb);
+      const response = await getTasks();
+
+      if (response.success && response.data) {
+        setTodos(response.data);
+      }
     });
   }, []);
 
   const handleAdd = async (title: string) => {
-    const createdTask = await createTask(title);
+    const response = await createTask(title);
 
-    if (createdTask) {
-      setTodos((currentTodos) => [createdTask, ...currentTodos]);
+    if (response.success && response.data) {
+      setTodos((currentTodos) => [response.data as TaskRecord, ...currentTodos]);
     }
   };
 
   const toggleTodo = async (id: string, completed: boolean) => {
-    const updatedTask = await toggleTask(id, completed);
+    const response = await toggleTask(id, completed);
 
-    if (updatedTask) {
+    if (response.success && response.data) {
       setTodos((currentTodos) =>
         currentTodos.map((todo) =>
-          todo.id === id ? { ...todo, completed: updatedTask.completed } : todo
+          todo.id === id ? { ...todo, completed: response.data!.completed } : todo
         )
       );
     }
+  };
+
+  const handleDelete = async (id: string) => {
+    const response = await deleteTask(id);
+
+    if (response.success) {
+      setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id));
+    }
+  };
+
+  const startEditing = (todo: TaskRecord) => {
+    setEditingTaskId(todo.id);
+    setEditingTitle(todo.title);
+  };
+
+  const saveEdit = async (id: string) => {
+    const trimmedTitle = editingTitle.trim();
+
+    if (!trimmedTitle) {
+      setEditingTaskId(null);
+      setEditingTitle("");
+      return;
+    }
+
+    const response = await updateTask(id, { title: trimmedTitle });
+
+    if (response.success && response.data) {
+      setTodos((currentTodos) =>
+        currentTodos.map((todo) =>
+          todo.id === id ? { ...todo, title: response.data!.title } : todo
+        )
+      );
+    }
+
+    setEditingTaskId(null);
+    setEditingTitle("");
   };
 
   return (
@@ -59,20 +107,77 @@ export function TodoList() {
                 <input
                   type="checkbox"
                   checked={todo.completed}
-                  onChange={() => toggleTodo(todo.id, !todo.completed)}
+                  onChange={() => {
+                    void toggleTodo(todo.id, !todo.completed);
+                  }}
                   className="h-4 w-4 rounded border-border text-orange-500 focus:ring-orange-500"
                   aria-label={`Mark ${todo.title} as ${todo.completed ? "incomplete" : "complete"}`}
                 />
 
                 <div className="min-w-0 flex-1">
-                  <p
-                    className={cn(
-                      "text-sm font-medium text-foreground",
-                      todo.completed && "text-muted-foreground line-through"
-                    )}
-                  >
-                    {todo.title}
-                  </p>
+                  {editingTaskId === todo.id ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={editingTitle}
+                        onChange={(event) => setEditingTitle(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            void saveEdit(todo.id);
+                          }
+
+                          if (event.key === "Escape") {
+                            setEditingTaskId(null);
+                            setEditingTitle("");
+                          }
+                        }}
+                        autoFocus
+                        className="w-full rounded-lg border border-border/60 bg-background/80 px-3 py-2 text-sm text-foreground outline-none focus:border-orange-500"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void saveEdit(todo.id);
+                        }}
+                        className="rounded-lg p-2 text-green-600 transition-colors hover:bg-accent"
+                        aria-label={`Save ${todo.title}`}
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingTaskId(null);
+                          setEditingTitle("");
+                        }}
+                        className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent"
+                        aria-label={`Cancel editing ${todo.title}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p
+                        className={cn(
+                          "text-sm font-medium text-foreground",
+                          todo.completed && "text-muted-foreground line-through"
+                        )}
+                      >
+                        {todo.title}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => startEditing(todo)}
+                        className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                        aria-label={`Edit ${todo.title}`}
+                      >
+                        <PencilLine className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
 
                   {todo.dueDate ? (
                     <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
@@ -81,6 +186,17 @@ export function TodoList() {
                     </div>
                   ) : null}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleDelete(todo.id);
+                  }}
+                  className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-red-600"
+                  aria-label={`Delete ${todo.title}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </li>
             ))}
           </ul>
