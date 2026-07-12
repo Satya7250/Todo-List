@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
   { title: "Tasks", href: "/tasks" },
-  { title: "Completed", href: "/completed" },
+  { title: "Notes", href: "/notes" },
 ];
 
 export function GlassNavbar() {

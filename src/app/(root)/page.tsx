@@ -2,21 +2,12 @@ import { auth } from "@clerk/nextjs/server";
 import { Caveat } from "next/font/google";
 import { HomeBackground } from "@/components/home/home-background";
 import { GlassNavbar } from "@/components/home/glass-navbar";
-import { TaskInput } from "@/components/home/task-input";
+import { TodoList } from "@/components/home/todo-list";
 
-const caveat = Caveat({ subsets: ["latin"]});
+const caveat = Caveat({ subsets: ["latin"] });
 
 export default async function Home() {
   await auth.protect();
-
-  async function createTask(title: string) {
-    "use server";
-
-    console.log(title);
-
-    // TODO:
-    // Save the task to your database
-  }
 
   return (
     <main className="relative min-h-screen overflow-hidden">
@@ -34,10 +25,9 @@ export default async function Home() {
             Turn ideas into completed tasks.
           </p>
 
-          <TaskInput
-            className="mx-auto mt-10"
-            onAdd={createTask}
-          />
+          <div className="mt-10">
+            <TodoList />
+          </div>
         </div>
       </section>
     </main>

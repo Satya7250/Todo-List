@@ -1,57 +1,86 @@
 "use server";
 
 import { auth, currentUser } from "@clerk/nextjs/server";
-// import { db } from "@/db";
-// import { users, projects } from "@/db/schema";
-// import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+
+import { db } from "@/db";
+import { users, projects } from "@/db/schema";
 
 export async function onBoardUser() {
-//   const { userId } = await auth();
+  const { userId } = await auth();
 
-//   if (!userId) return null;
+  if (!userId) {
+    return null;
+  }
 
-//   const clerkUser = await currentUser();
+  const clerkUser = await currentUser();
 
-//   if (!clerkUser) return null;
+  if (!clerkUser) {
+    return null;
+  }
 
-//   const email =
-//     clerkUser.primaryEmailAddress?.emailAddress ??
-//     clerkUser.emailAddresses[0]?.emailAddress ??
-//     "";
+  const email =
+    clerkUser.primaryEmailAddress?.emailAddress ??
+    clerkUser.emailAddresses[0]?.emailAddress ??
+    "";
 
-//   const name =
-//     clerkUser.fullName ??
-//     [clerkUser.firstName, clerkUser.lastName]
-//       .filter(Boolean)
-//       .join(" ");
+  const name =
+    clerkUser.fullName ??
+    [clerkUser.firstName, clerkUser.lastName]
+      .filter(Boolean)
+      .join(" ");
 
-//   const existingUser = await db.query.users.findFirst({
-//     where: eq(users.clerkId, userId),
-//   });
+  // Check if the user already exists
+  const existingUser = await db.query.users.findFirst({
+    where: eq(users.clerkId, userId),
+  });
 
-//   if (existingUser) {
-//     return existingUser;
-//   }
+  if (existingUser) {
+    return existingUser;
+  }
 
-//   const [newUser] = await db
-//     .insert(users)
-//     .values({
-//       clerkId: userId,
-//       email,
-//       name,
-//       firstName: clerkUser.firstName,
-//       lastName: clerkUser.lastName,
-//       imageUrl: clerkUser.imageUrl,
-//     })
-//     .returning();
+  // Create user
+  const [newUser] = await db
+    .insert(users)
+    .values({
+      clerkId: userId,
+      email,
+      name,
+      imageUrl: clerkUser.imageUrl,
+    })
+    .returning();
 
-//   await db.insert(projects).values({
-//     userId: newUser.id,
-//     name: "Inbox",
-//     icon: "inbox",
-//     color: "#f97316",
-//     isDefault: true,
-//   });
+  // Create default Inbox project
+  await db.insert(projects).values({
+    userId: newUser.id,
+    name: "Inbox",
+    color: "#f97316",
+    icon: "inbox",
+    isDefault: true,
+  });
 
-//   return newUser;
+  return newUser;
+}
+
+export async function getCurrentUser() {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return null;
+  }
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.clerkId, userId),
+  });
+
+  return user;
+}
+
+export async function getInboxProject(userId: string) {
+  return await db.query.projects.findFirst({
+    where: and(
+      eq(projects.userId, userId),
+      eq(projects.isDefault, true)
+    ),
+  });
 }
