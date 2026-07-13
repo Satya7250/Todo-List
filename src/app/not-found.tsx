@@ -18,7 +18,7 @@ export default function NotFound() {
         </h1>
 
         <p className="mt-4 text-muted-foreground">
-          We're still building this feature. It will be available in a future
+          We&apos;re still building this feature. It will be available in a future
           update. Stay tuned!
         </p>
 

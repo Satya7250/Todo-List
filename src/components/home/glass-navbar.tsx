@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { Menu, X } from "lucide-react";
 
+import { type ProjectRecord } from "@/actions/projects";
 import { TodoLogo } from "@/components/brand/todo-logo";
+import { ProjectSwitcher } from "@/components/home/project-switcher";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +17,19 @@ const navigation = [
   { title: "Notes", href: "/notes" },
 ];
 
-export function GlassNavbar() {
+interface GlassNavbarProps {
+  projects: ProjectRecord[];
+  selectedProjectId: string | null;
+  onSelectProject: (projectId: string | null) => void;
+  onProjectsChange: Dispatch<SetStateAction<ProjectRecord[]>>;
+}
+
+export function GlassNavbar({
+  projects,
+  selectedProjectId,
+  onSelectProject,
+  onProjectsChange,
+}: GlassNavbarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -30,7 +44,7 @@ export function GlassNavbar() {
       >
         {/* Ambient glow */}
         <div className="pointer-events-none absolute inset-y-0 left-0 w-64 bg-linear-to-r from-orange-500/10 to-transparent" />
-        
+
         <div className="pointer-events-none absolute inset-y-0 right-0 w-64 bg-linear-to-l from-orange-500/10 to-transparent" />
         {/* Glass highlight */}
         <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/5 dark:ring-white/15" />
@@ -68,7 +82,13 @@ export function GlassNavbar() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <ProjectSwitcher
+              projects={projects}
+              selectedProjectId={selectedProjectId}
+              onSelectProject={onSelectProject}
+              onProjectsChange={onProjectsChange}
+            />
             <ModeToggle />
             <UserButton />
 

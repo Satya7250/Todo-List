@@ -20,6 +20,10 @@ interface TaskRecordFromDb {
   updatedAt: Date;
 }
 
+interface TaskQueryOptions {
+  projectId?: string | null;
+}
+
 export interface TaskActionResult<T> {
   success: boolean;
   data: T | null;
@@ -101,17 +105,29 @@ function normalizeDueDate(value: string | Date | null | undefined) {
   return parsedDate;
 }
 
-export async function getTasks(): Promise<TaskActionResult<TaskRecord[]>> {
+export async function getTasks(
+  options: TaskQueryOptions = {}
+): Promise<TaskActionResult<TaskRecord[]>> {
   const currentUser = await getCurrentUserData();
 
   if (!currentUser) {
     return createErrorResult<TaskRecord[]>("You must be signed in to view tasks.");
   }
 
+  const whereClauses = [eq(tasks.userId, currentUser.id)];
+  const targetProjectId =
+    options.projectId === undefined || options.projectId === null
+      ? await getInboxProjectId(currentUser.id)
+      : options.projectId;
+
+  if (targetProjectId) {
+    whereClauses.push(eq(tasks.projectId, targetProjectId));
+  }
+
   const userTasks = await db
     .select()
     .from(tasks)
-    .where(eq(tasks.userId, currentUser.id))
+    .where(and(...whereClauses))
     .orderBy(desc(tasks.createdAt));
 
   return {
@@ -124,7 +140,8 @@ export async function getTasks(): Promise<TaskActionResult<TaskRecord[]>> {
 export async function createTask(
   title: string,
   dueDate?: Date | string | null,
-  priority?: number
+  priority?: number,
+  projectId?: string | null
 ): Promise<TaskActionResult<TaskRecord | null>> {
   const trimmedTitle = title.trim();
 
@@ -146,11 +163,11 @@ export async function createTask(
     );
   }
 
-  const inboxProjectId = await getInboxProjectId(currentUser.id);
+  const targetProjectId = projectId ?? (await getInboxProjectId(currentUser.id));
 
-  if (!inboxProjectId) {
+  if (!targetProjectId) {
     return createErrorResult<TaskRecord | null>(
-      "Could not find an inbox project for your account."
+      "Could not find a valid project for your account."
     );
   }
 
@@ -172,7 +189,7 @@ export async function createTask(
     .insert(tasks)
     .values({
       userId: currentUser.id,
-      projectId: inboxProjectId,
+      projectId: targetProjectId,
       title: trimmedTitle,
       completed: false,
       priority: priorityValue,

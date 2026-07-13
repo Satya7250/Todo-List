@@ -6,6 +6,29 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, projects } from "@/db/schema";
 
+async function ensureInboxProject(userId: string) {
+  const inboxProject = await db.query.projects.findFirst({
+    where: and(eq(projects.userId, userId), eq(projects.isDefault, true)),
+  });
+
+  if (inboxProject) {
+    return inboxProject;
+  }
+
+  const [createdProject] = await db
+    .insert(projects)
+    .values({
+      userId,
+      name: "Inbox",
+      color: "#f97316",
+      icon: "inbox",
+      isDefault: true,
+    })
+    .returning();
+
+  return createdProject;
+}
+
 export async function onBoardUser() {
   const { userId } = await auth();
 
@@ -36,6 +59,7 @@ export async function onBoardUser() {
   });
 
   if (existingUser) {
+    await ensureInboxProject(existingUser.id);
     return existingUser;
   }
 
@@ -50,14 +74,7 @@ export async function onBoardUser() {
     })
     .returning();
 
-  // Create default Inbox project
-  await db.insert(projects).values({
-    userId: newUser.id,
-    name: "Inbox",
-    color: "#f97316",
-    icon: "inbox",
-    isDefault: true,
-  });
+  await ensureInboxProject(newUser.id);
 
   return newUser;
 }
