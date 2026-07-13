@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { CalendarDays, Check, PencilLine, Trash2, X } from "lucide-react";
+import { CalendarDays, Check, PencilLine, Trash2, X, Calendar as CalendarIcon, Flag as FlagIcon } from "lucide-react";
 
 import {
   createTask,
@@ -13,11 +13,40 @@ import {
 } from "@/actions/tasks";
 import { TaskInput } from "@/components/home/task-input";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+
+const PRIORITIES = [
+  { value: 0, label: "None", color: "text-muted-foreground" },
+  { value: 1, label: "Low", color: "text-blue-500" },
+  { value: 2, label: "Medium", color: "text-amber-500" },
+  { value: 3, label: "High", color: "text-orange-500" },
+  { value: 4, label: "Urgent", color: "text-red-500" },
+] as const;
+
+function getPriorityClass(priority: number) {
+  switch (priority) {
+    case 1:
+      return "text-blue-500 bg-blue-500/10";
+    case 2:
+      return "text-amber-500 bg-amber-500/10";
+    case 3:
+      return "text-orange-500 bg-orange-500/10";
+    case 4:
+      return "text-red-500 bg-red-500/10";
+    default:
+      return "text-muted-foreground hover:text-foreground";
+  }
+}
 
 export function TodoList() {
   const [todos, setTodos] = useState<TaskRecord[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [editingDueDate, setEditingDueDate] = useState<Date | null>(null);
+  const [editingPriority, setEditingPriority] = useState<number>(0);
+  const [isEditCalendarOpen, setIsEditCalendarOpen] = useState(false);
+  const [isEditPriorityOpen, setIsEditPriorityOpen] = useState(false);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -30,8 +59,8 @@ export function TodoList() {
     });
   }, []);
 
-  const handleAdd = async (title: string) => {
-    const response = await createTask(title);
+  const handleAdd = async (title: string, dueDate: Date | null, priority: number) => {
+    const response = await createTask(title, dueDate, priority);
 
     if (response.success && response.data) {
       setTodos((currentTodos) => [response.data as TaskRecord, ...currentTodos]);
@@ -61,6 +90,8 @@ export function TodoList() {
   const startEditing = (todo: TaskRecord) => {
     setEditingTaskId(todo.id);
     setEditingTitle(todo.title);
+    setEditingDueDate(todo.dueDate ? new Date(todo.dueDate) : null);
+    setEditingPriority(todo.priority);
   };
 
   const saveEdit = async (id: string) => {
@@ -69,21 +100,36 @@ export function TodoList() {
     if (!trimmedTitle) {
       setEditingTaskId(null);
       setEditingTitle("");
+      setEditingDueDate(null);
+      setEditingPriority(0);
       return;
     }
 
-    const response = await updateTask(id, { title: trimmedTitle });
+    const response = await updateTask(id, {
+      title: trimmedTitle,
+      dueDate: editingDueDate,
+      priority: editingPriority,
+    });
 
     if (response.success && response.data) {
       setTodos((currentTodos) =>
         currentTodos.map((todo) =>
-          todo.id === id ? { ...todo, title: response.data!.title } : todo
+          todo.id === id
+            ? {
+                ...todo,
+                title: response.data!.title,
+                dueDate: response.data!.dueDate,
+                priority: response.data!.priority,
+              }
+            : todo
         )
       );
     }
 
     setEditingTaskId(null);
     setEditingTitle("");
+    setEditingDueDate(null);
+    setEditingPriority(0);
   };
 
   return (
@@ -116,7 +162,7 @@ export function TodoList() {
 
                 <div className="min-w-0 flex-1">
                   {editingTaskId === todo.id ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full">
                       <input
                         value={editingTitle}
                         onChange={(event) => setEditingTitle(event.target.value)}
@@ -128,18 +174,93 @@ export function TodoList() {
                           if (event.key === "Escape") {
                             setEditingTaskId(null);
                             setEditingTitle("");
+                            setEditingDueDate(null);
+                            setEditingPriority(0);
                           }
                         }}
                         autoFocus
-                        className="w-full rounded-lg border border-border/60 bg-background/80 px-3 py-2 text-sm text-foreground outline-none focus:border-orange-500"
+                        className="flex-1 rounded-lg border border-border/60 bg-background/80 px-3 py-2 text-sm text-foreground outline-none focus:border-orange-500"
                       />
+
+                      <Popover open={isEditCalendarOpen} onOpenChange={setIsEditCalendarOpen}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className={cn(
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-accent",
+                              editingDueDate
+                                ? "bg-orange-500/10 text-orange-500 hover:text-orange-600"
+                                : "text-muted-foreground hover:text-foreground"
+                            )}
+                            aria-label="Set due date"
+                          >
+                            <CalendarIcon className="h-4 w-4" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 flex flex-col animate-none" align="end">
+                          <Calendar
+                            mode="single"
+                            selected={editingDueDate || undefined}
+                            onSelect={(date) => {
+                              setEditingDueDate(date || null);
+                              setIsEditCalendarOpen(false);
+                            }}
+                          />
+                          {editingDueDate && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingDueDate(null);
+                                setIsEditCalendarOpen(false);
+                              }}
+                              className="w-full text-center text-xs py-2 font-medium hover:bg-accent transition-colors rounded-b-md text-red-500 border-t border-border"
+                            >
+                              Clear date
+                            </button>
+                          )}
+                        </PopoverContent>
+                      </Popover>
+
+                      <Popover open={isEditPriorityOpen} onOpenChange={setIsEditPriorityOpen}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className={cn(
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-accent",
+                              getPriorityClass(editingPriority)
+                            )}
+                            aria-label="Set priority"
+                          >
+                            <FlagIcon className={cn("h-4 w-4", editingPriority > 0 && "fill-current")} />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-40 p-1 flex flex-col gap-0.5 animate-none" align="end">
+                          {PRIORITIES.map((p) => (
+                            <button
+                              key={p.value}
+                              type="button"
+                              onClick={() => {
+                                setEditingPriority(p.value);
+                                setIsEditPriorityOpen(false);
+                              }}
+                              className={cn(
+                                "flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-accent",
+                                editingPriority === p.value ? "bg-accent/80 font-medium" : ""
+                              )}
+                            >
+                              <FlagIcon className={cn("h-3.5 w-3.5", p.value > 0 && "fill-current", p.color)} />
+                              <span className="text-xs text-foreground font-medium">{p.label}</span>
+                            </button>
+                          ))}
+                        </PopoverContent>
+                      </Popover>
 
                       <button
                         type="button"
                         onClick={() => {
                           void saveEdit(todo.id);
                         }}
-                        className="rounded-lg p-2 text-green-600 transition-colors hover:bg-accent"
+                        className="rounded-lg p-2 text-green-600 transition-colors hover:bg-accent shrink-0"
                         aria-label={`Save ${todo.title}`}
                       >
                         <Check className="h-4 w-4" />
@@ -150,8 +271,10 @@ export function TodoList() {
                         onClick={() => {
                           setEditingTaskId(null);
                           setEditingTitle("");
+                          setEditingDueDate(null);
+                          setEditingPriority(0);
                         }}
-                        className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent"
+                        className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent shrink-0"
                         aria-label={`Cancel editing ${todo.title}`}
                       >
                         <X className="h-4 w-4" />
@@ -179,12 +302,22 @@ export function TodoList() {
                     </div>
                   )}
 
-                  {todo.dueDate ? (
-                    <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                      <CalendarDays className="h-3.5 w-3.5" />
-                      <span>{new Date(todo.dueDate).toLocaleDateString()}</span>
+                  {(todo.dueDate || todo.priority > 0) && (
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      {todo.dueDate ? (
+                        <div className="flex items-center gap-1">
+                          <CalendarDays className="h-3.5 w-3.5" />
+                          <span>{new Date(todo.dueDate).toLocaleDateString()}</span>
+                        </div>
+                      ) : null}
+                      {todo.priority > 0 ? (
+                        <div className="flex items-center gap-1">
+                          <FlagIcon className={cn("h-3.5 w-3.5 fill-current", getPriorityClass(todo.priority).split(" ")[0])} />
+                          <span>{PRIORITIES.find(p => p.value === todo.priority)?.label} Priority</span>
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
+                  )}
                 </div>
 
                 <button

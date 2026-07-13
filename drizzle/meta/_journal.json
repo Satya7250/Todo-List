@@ -8,6 +8,13 @@
       "when": 1783839607400,
       "tag": "0000_clumsy_carnage",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783875895334,
+      "tag": "0001_windy_santa_claus",
+      "breakpoints": true
     }
   ]
 }
