@@ -122,7 +122,9 @@ export async function getTasks(): Promise<TaskActionResult<TaskRecord[]>> {
 }
 
 export async function createTask(
-  title: string
+  title: string,
+  dueDate?: Date | string | null,
+  priority?: number
 ): Promise<TaskActionResult<TaskRecord | null>> {
   const trimmedTitle = title.trim();
 
@@ -152,6 +154,20 @@ export async function createTask(
     );
   }
 
+  const priorityValue = priority !== undefined ? Number(priority) : 0;
+  if (!Number.isInteger(priorityValue) || priorityValue < 0 || priorityValue > 4) {
+    return createErrorResult<TaskRecord | null>(
+      "Task priority must be a whole number between 0 and 4."
+    );
+  }
+
+  const parsedDueDate = dueDate ? normalizeDueDate(dueDate) : null;
+  if (dueDate !== undefined && dueDate !== null && dueDate !== "" && !parsedDueDate) {
+    return createErrorResult<TaskRecord | null>(
+      "Task due date must be a valid date."
+    );
+  }
+
   const [createdTask] = await db
     .insert(tasks)
     .values({
@@ -159,6 +175,8 @@ export async function createTask(
       projectId: inboxProjectId,
       title: trimmedTitle,
       completed: false,
+      priority: priorityValue,
+      dueDate: parsedDueDate,
     })
     .returning();
 
@@ -212,9 +230,9 @@ export async function updateTask(
   if (updates.priority !== undefined) {
     const priorityValue = Number(updates.priority);
 
-    if (!Number.isInteger(priorityValue) || priorityValue < 1 || priorityValue > 3) {
+    if (!Number.isInteger(priorityValue) || priorityValue < 0 || priorityValue > 4) {
       return createErrorResult<TaskRecord | null>(
-        "Task priority must be a whole number between 1 and 3."
+        "Task priority must be a whole number between 0 and 4."
       );
     }
 
