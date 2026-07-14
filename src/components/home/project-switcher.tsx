@@ -156,7 +156,7 @@ export function ProjectSwitcher({
             className="h-9 gap-2 rounded-xl border-border/50 bg-background/70 px-3 text-sm font-medium text-foreground shadow-none backdrop-blur-xl hover:bg-accent/80"
           >
             <FolderKanban className="h-4 w-4" />
-            <span className="max-w-[10rem] truncate">
+            <span className="max-w-40 truncate">
               {selectedProject?.name ?? "Projects"}
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />

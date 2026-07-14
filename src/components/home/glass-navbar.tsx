@@ -13,7 +13,7 @@ import { ModeToggle } from "@/components/ui/mode-toggle";
 import { cn } from "@/lib/utils";
 
 const navigation = [
-  { title: "Tasks", href: "/tasks" },
+  { title: "About", href: "/about" },
   { title: "Notes", href: "/notes" },
 ];
 
@@ -22,6 +22,7 @@ interface GlassNavbarProps {
   selectedProjectId: string | null;
   onSelectProject: (projectId: string | null) => void;
   onProjectsChange: Dispatch<SetStateAction<ProjectRecord[]>>;
+  showProjectSwitcher?: boolean;
 }
 
 export function GlassNavbar({
@@ -29,6 +30,7 @@ export function GlassNavbar({
   selectedProjectId,
   onSelectProject,
   onProjectsChange,
+  showProjectSwitcher = true,
 }: GlassNavbarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -83,12 +85,14 @@ export function GlassNavbar({
 
           {/* Actions */}
           <div className="flex items-center gap-2 sm:gap-4">
-            <ProjectSwitcher
-              projects={projects}
-              selectedProjectId={selectedProjectId}
-              onSelectProject={onSelectProject}
-              onProjectsChange={onProjectsChange}
-            />
+            {showProjectSwitcher && (
+  <ProjectSwitcher
+    projects={projects}
+    selectedProjectId={selectedProjectId}
+    onSelectProject={onSelectProject}
+    onProjectsChange={onProjectsChange}
+  />
+)}
             <ModeToggle />
             <UserButton />
 
