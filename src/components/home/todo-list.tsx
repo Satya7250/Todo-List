@@ -120,11 +120,11 @@ export function TodoList({ selectedProjectId }: TodoListProps) {
         currentTodos.map((todo) =>
           todo.id === id
             ? {
-                ...todo,
-                title: response.data!.title,
-                dueDate: response.data!.dueDate,
-                priority: response.data!.priority,
-              }
+              ...todo,
+              title: response.data!.title,
+              dueDate: response.data!.dueDate,
+              priority: response.data!.priority,
+            }
             : todo
         )
       );
@@ -154,7 +154,7 @@ export function TodoList({ selectedProjectId }: TodoListProps) {
                 {todos.map((todo) => (
                   <li
                     key={todo.id}
-                    className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/50 px-4 py-3 transition-colors hover:bg-accent/50"
+                    className="flex items-start gap-3 rounded-xl border border-border/50 bg-background/50 px-4 py-3 transition-colors hover:bg-accent/50"
                   >
                     <input
                       type="checkbox"
@@ -162,13 +162,13 @@ export function TodoList({ selectedProjectId }: TodoListProps) {
                       onChange={() => {
                         void toggleTodo(todo.id, !todo.completed);
                       }}
-                      className="h-4 w-4 rounded border-border text-orange-500 focus:ring-orange-500"
+                      className="mt-2.5 h-4 w-4 shrink-0 rounded border-border text-orange-500 focus:ring-orange-500"
                       aria-label={`Mark ${todo.title} as ${todo.completed ? "incomplete" : "complete"}`}
                     />
 
                     <div className="min-w-0 flex-1">
                       {editingTaskId === todo.id ? (
-                        <div className="flex items-center gap-2 w-full">
+                        <div className="flex w-full min-w-0 flex-col gap-2">
                           <input
                             value={editingTitle}
                             onChange={(event) => setEditingTitle(event.target.value)}
@@ -185,106 +185,122 @@ export function TodoList({ selectedProjectId }: TodoListProps) {
                               }
                             }}
                             autoFocus
-                            className="flex-1 rounded-lg border border-border/60 bg-background/80 px-3 py-2 text-sm text-foreground outline-none focus:border-orange-500"
+                            className="w-full min-w-0 rounded-lg border border-border/60 bg-background/80 px-3 py-2 text-sm text-foreground outline-none focus:border-orange-500"
                           />
 
-                          <Popover open={isEditCalendarOpen} onOpenChange={setIsEditCalendarOpen}>
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className={cn(
-                                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-accent",
-                                  editingDueDate
-                                    ? "bg-orange-500/10 text-orange-500 hover:text-orange-600"
-                                    : "text-muted-foreground hover:text-foreground"
-                                )}
-                                aria-label="Set due date"
-                              >
-                                <CalendarIcon className="h-4 w-4" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 flex flex-col animate-none" align="end">
-                              <Calendar
-                                mode="single"
-                                selected={editingDueDate || undefined}
-                                onSelect={(date) => {
-                                  setEditingDueDate(date || null);
-                                  setIsEditCalendarOpen(false);
-                                }}
-                              />
-                              {editingDueDate && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingDueDate(null);
-                                    setIsEditCalendarOpen(false);
-                                  }}
-                                  className="w-full text-center text-xs py-2 font-medium hover:bg-accent transition-colors rounded-b-md text-red-500 border-t border-border"
+                          <div className="flex min-w-0 items-center justify-between gap-1">
+                            <div className="flex min-w-0 items-center gap-1">
+                              <Popover open={isEditCalendarOpen} onOpenChange={setIsEditCalendarOpen}>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className={cn(
+                                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-accent",
+                                      editingDueDate
+                                        ? "bg-orange-500/10 text-orange-500 hover:text-orange-600"
+                                        : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                    aria-label="Set due date"
+                                  >
+                                    <CalendarIcon className="h-4 w-4" />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="flex w-[min(90vw,20rem)] flex-col p-0 animate-none"
+                                  align="start"
+                                  sideOffset={8}
+                                  avoidCollisions={false}
                                 >
-                                  Clear date
-                                </button>
-                              )}
-                            </PopoverContent>
-                          </Popover>
-
-                          <Popover open={isEditPriorityOpen} onOpenChange={setIsEditPriorityOpen}>
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className={cn(
-                                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-accent",
-                                  getPriorityClass(editingPriority)
-                                )}
-                                aria-label="Set priority"
-                              >
-                                <FlagIcon className={cn("h-4 w-4", editingPriority > 0 && "fill-current")} />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-40 p-1 flex flex-col gap-0.5 animate-none" align="end">
-                              {PRIORITIES.map((p) => (
-                                <button
-                                  key={p.value}
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingPriority(p.value);
-                                    setIsEditPriorityOpen(false);
-                                  }}
-                                  className={cn(
-                                    "flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-accent",
-                                    editingPriority === p.value ? "bg-accent/80 font-medium" : ""
+                                  <Calendar
+                                    mode="single"
+                                    selected={editingDueDate || undefined}
+                                    onSelect={(date) => {
+                                      setEditingDueDate(date || null);
+                                      setIsEditCalendarOpen(false);
+                                    }}
+                                  />
+                                  {editingDueDate && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingDueDate(null);
+                                        setIsEditCalendarOpen(false);
+                                      }}
+                                      className="w-full text-center text-xs py-2 font-medium hover:bg-accent transition-colors rounded-b-md text-red-500 border-t border-border"
+                                    >
+                                      Clear date
+                                    </button>
                                   )}
+                                </PopoverContent>
+                              </Popover>
+
+                              <Popover open={isEditPriorityOpen} onOpenChange={setIsEditPriorityOpen}>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className={cn(
+                                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-accent",
+                                      getPriorityClass(editingPriority)
+                                    )}
+                                    aria-label="Set priority"
+                                  >
+                                    <FlagIcon className={cn("h-4 w-4", editingPriority > 0 && "fill-current")} />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="flex w-40 flex-col gap-0.5 p-1 animate-none"
+                                  align="start"
+                                  sideOffset={8}
+                                  avoidCollisions={false}
                                 >
-                                  <FlagIcon className={cn("h-3.5 w-3.5", p.value > 0 && "fill-current", p.color)} />
-                                  <span className="text-xs text-foreground font-medium">{p.label}</span>
-                                </button>
-                              ))}
-                            </PopoverContent>
-                          </Popover>
+                                  {PRIORITIES.map((p) => (
+                                    <button
+                                      key={p.value}
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingPriority(p.value);
+                                        setIsEditPriorityOpen(false);
+                                      }}
+                                      className={cn(
+                                        "flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-accent",
+                                        editingPriority === p.value ? "bg-accent/80 font-medium" : ""
+                                      )}
+                                    >
+                                      <FlagIcon className={cn("h-3.5 w-3.5", p.value > 0 && "fill-current", p.color)} />
+                                      <span className="text-xs text-foreground font-medium">{p.label}</span>
+                                    </button>
+                                  ))}
+                                </PopoverContent>
+                              </Popover>
+                            </div>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              void saveEdit(todo.id);
-                            }}
-                            className="rounded-lg p-2 text-green-600 transition-colors hover:bg-accent shrink-0"
-                            aria-label={`Save ${todo.title}`}
-                          >
-                            <Check className="h-4 w-4" />
-                          </button>
+                            <div className="flex shrink-0 items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void saveEdit(todo.id);
+                                }}
+                                className="rounded-lg p-2 text-green-600 transition-colors hover:bg-accent shrink-0"
+                                aria-label={`Save ${todo.title}`}
+                              >
+                                <Check className="h-4 w-4" />
+                              </button>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingTaskId(null);
-                              setEditingTitle("");
-                              setEditingDueDate(null);
-                              setEditingPriority(0);
-                            }}
-                            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent shrink-0"
-                            aria-label={`Cancel editing ${todo.title}`}
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingTaskId(null);
+                                  setEditingTitle("");
+                                  setEditingDueDate(null);
+                                  setEditingPriority(0);
+                                }}
+                                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent shrink-0"
+                                aria-label={`Cancel editing ${todo.title}`}
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -326,16 +342,18 @@ export function TodoList({ selectedProjectId }: TodoListProps) {
                       )}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void handleDelete(todo.id);
-                      }}
-                      className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-red-600"
-                      aria-label={`Delete ${todo.title}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {editingTaskId !== todo.id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleDelete(todo.id);
+                        }}
+                        className="mt-1 shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-red-600"
+                        aria-label={`Delete ${todo.title}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

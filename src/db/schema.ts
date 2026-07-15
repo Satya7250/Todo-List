@@ -72,3 +72,19 @@ export const tasks = pgTable("tasks", {
 
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const notes = pgTable("notes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+
+  title: text("title").notNull().default("Untitled"),
+
+  content: text("content").notNull().default(""),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

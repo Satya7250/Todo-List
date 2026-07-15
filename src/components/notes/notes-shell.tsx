@@ -5,18 +5,14 @@ import { FileText, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  createNote,
+  deleteNote,
+  getNotes,
+  updateNote,
+  type NoteRecord,
+} from "@/actions/notes";
 // import { GlassNavbar } from "@/components/home/glass-navbar";
-
-/**
- * A single note. Swap this for your generated DB row type once the
- * `notes` table exists (e.g. the type Drizzle/Prisma/Supabase generates).
- */
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  createdAt: string; // ISO date string
-}
 
 const RULE_LINE_HEIGHT = 32; // px — every ruled element below shares this rhythm
 const HOLE_COUNT = 7;
@@ -48,34 +44,32 @@ const paperRuleStyle: React.CSSProperties = {
 };
 
 const NotesShell = () => {
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [notes, setNotes] = useState<NoteRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
 
-  // ---------------------------------------------------------------------
-  // TODO: DB — fetch this user's notes on mount.
-  // Example (REST):
-  //   const res = await fetch("/api/notes");
-  //   const data: Note[] = await res.json();
-  //   setNotes(data);
-  // Example (Supabase):
-  //   const { data } = await supabase
-  //     .from("notes")
-  //     .select("*")
-  //     .order("createdAt", { ascending: false });
-  //   setNotes(data ?? []);
-  // ---------------------------------------------------------------------
+  /** Grows the textarea to fit its content, snapped to RULE_LINE_HEIGHT so the ruled lines stay aligned with the text as it expands. */
+  const autoGrow = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    const minHeight = RULE_LINE_HEIGHT * 5;
+    const lines = Math.ceil(el.scrollHeight / RULE_LINE_HEIGHT);
+    el.style.height = `${Math.max(minHeight, lines * RULE_LINE_HEIGHT)}px`;
+  };
+
   useEffect(() => {
     async function loadNotes() {
       setIsLoading(true);
       try {
-        // Replace with the real fetch above. Left empty so the UI
-        // renders its empty state until the DB call is wired up.
-        setNotes([]);
+        const response = await getNotes();
+        if (response.success && response.data) {
+          setNotes(response.data);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -88,13 +82,15 @@ const NotesShell = () => {
     setTitle("");
     setContent("");
     setEditingId(null);
+    requestAnimationFrame(() => autoGrow(contentRef.current));
   };
 
-  const handleEditNote = (note: Note) => {
+  const handleEditNote = (note: NoteRecord) => {
     setEditingId(note.id);
     setTitle(note.title);
     setContent(note.content);
     editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    requestAnimationFrame(() => autoGrow(contentRef.current));
   };
 
   const handleSave = async () => {
@@ -105,38 +101,20 @@ const NotesShell = () => {
     setIsSaving(true);
     try {
       if (editingId) {
-        // -----------------------------------------------------------
-        // TODO: DB — update the existing note.
-        // Example:
-        //   await fetch(`/api/notes/${editingId}`, {
-        //     method: "PATCH",
-        //     body: JSON.stringify({ title: trimmedTitle, content: trimmedContent }),
-        //   });
-        // -----------------------------------------------------------
-        setNotes((prev) =>
-          prev.map((n) =>
-            n.id === editingId ? { ...n, title: trimmedTitle, content: trimmedContent } : n
-          )
-        );
-      } else {
-        // -----------------------------------------------------------
-        // TODO: DB — insert a new note and use the row it returns
-        // (so the id/createdAt come from the database, not the client).
-        // Example:
-        //   const res = await fetch("/api/notes", {
-        //     method: "POST",
-        //     body: JSON.stringify({ title: trimmedTitle, content: trimmedContent }),
-        //   });
-        //   const newNote: Note = await res.json();
-        //   setNotes((prev) => [newNote, ...prev]);
-        // -----------------------------------------------------------
-        const optimisticNote: Note = {
-          id: crypto.randomUUID(),
-          title: trimmedTitle || "Untitled",
+        const response = await updateNote(editingId, {
+          title: trimmedTitle,
           content: trimmedContent,
-          createdAt: new Date().toISOString(),
-        };
-        setNotes((prev) => [optimisticNote, ...prev]);
+        });
+
+        if (response.success && response.data) {
+          setNotes((prev) => prev.map((n) => (n.id === editingId ? response.data! : n)));
+        }
+      } else {
+        const response = await createNote(trimmedTitle, trimmedContent);
+
+        if (response.success && response.data) {
+          setNotes((prev) => [response.data!, ...prev]);
+        }
       }
 
       resetEditor();
@@ -146,13 +124,11 @@ const NotesShell = () => {
   };
 
   const handleDelete = async (id: string) => {
-    // -------------------------------------------------------------------
-    // TODO: DB — delete the note.
-    // Example:
-    //   await fetch(`/api/notes/${id}`, { method: "DELETE" });
-    // -------------------------------------------------------------------
-    setNotes((prev) => prev.filter((n) => n.id !== id));
-    if (editingId === id) resetEditor();
+    const response = await deleteNote(id);
+    if (response.success) {
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+      if (editingId === id) resetEditor();
+    }
   };
 
   return (
@@ -195,23 +171,26 @@ const NotesShell = () => {
                 placeholder="Title this page..."
                 disabled={isSaving}
                 className={cn(
-                  "h-12 w-full bg-transparent pt-3 font-mono text-base font-semibold text-[#2b2723] outline-none",
+                  "h-13 w-full bg-transparent pt-3 font-mono text-base font-semibold text-[#2b2723] outline-none",
                   "placeholder:font-normal placeholder:text-[#8a8375] disabled:opacity-60"
                 )}
                 style={{ lineHeight: `${RULE_LINE_HEIGHT}px` }}
               />
 
               <textarea
+                ref={contentRef}
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={(e) => {
+                  setContent(e.target.value);
+                  autoGrow(e.target);
+                }}
                 placeholder="Start writing..."
                 disabled={isSaving}
-                rows={5}
                 className={cn(
-                  "w-full resize-none bg-transparent font-mono text-sm text-[#2b2723] outline-none",
+                  "block w-full resize-none overflow-hidden bg-transparent font-mono text-sm text-[#2b2723] outline-none",
                   "placeholder:text-[#8a8375] disabled:opacity-60"
                 )}
-                style={{ lineHeight: `${RULE_LINE_HEIGHT}px` }}
+                style={{ lineHeight: `${RULE_LINE_HEIGHT}px`, height: `${RULE_LINE_HEIGHT * 5}px` }}
               />
             </div>
           </div>
