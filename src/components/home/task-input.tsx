@@ -81,7 +81,7 @@ export function TaskInput({
       <form
         onSubmit={handleSubmit}
         className={cn(
-          "relative flex items-center gap-2 overflow-hidden rounded-2xl border p-2 backdrop-blur-xl transition-all duration-200",
+          "relative flex flex-col gap-2 overflow-hidden rounded-2xl border p-2 backdrop-blur-xl transition-all duration-200",
           "border-border/50 bg-background/70",
           "focus-within:border-orange-500/50 focus-within:shadow-lg focus-within:shadow-orange-500/10",
           "dark:border-white/10 dark:bg-zinc-900/80 dark:focus-within:border-orange-500/40"
@@ -90,6 +90,7 @@ export function TaskInput({
         {/* Ambient glow on focus */}
         <div className="pointer-events-none absolute inset-y-0 left-0 w-32 bg-linear-to-r from-orange-500/5 to-transparent" />
 
+        {/* Row 1: text input, always full width */}
         <input
           ref={inputRef}
           type="text"
@@ -98,90 +99,101 @@ export function TaskInput({
           placeholder={placeholder}
           disabled={isSubmitting}
           className={cn(
-            "relative z-10 h-10 flex-1 bg-transparent px-3 text-sm text-foreground outline-none",
+            "relative z-10 h-10 w-full bg-transparent px-3 text-sm text-foreground outline-none",
             "placeholder:text-muted-foreground disabled:opacity-50"
           )}
         />
 
-        <div className="relative z-10 flex items-center gap-1">
-          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:bg-accent",
-                  dueDate 
-                    ? "bg-orange-500/10 text-orange-500 hover:text-orange-600" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                aria-label="Set due date"
-              >
-                <CalendarIcon className="h-4 w-4" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 flex flex-col animate-none" align="end">
-              <Calendar
-                mode="single"
-                selected={dueDate || undefined}
-                onSelect={(date) => {
-                  setDueDate(date || null);
-                  setIsCalendarOpen(false);
-                }}
-              />
-              {dueDate && (
+        {/* Row 2: date / priority / submit — its own row so nothing gets squeezed */}
+        <div className="relative z-10 flex items-center justify-between gap-1 px-1 pb-1 sm:px-0 sm:pb-0">
+          <div className="flex items-center gap-1">
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <PopoverTrigger asChild>
                 <button
                   type="button"
-                  onClick={() => {
-                    setDueDate(null);
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-accent",
+                    dueDate
+                      ? "bg-orange-500/10 text-orange-500 hover:text-orange-600"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  aria-label="Set due date"
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="flex w-[min(90vw,18rem)] min-h-85 flex-col p-0 animate-none"
+                align="start"
+                sideOffset={8}
+              >
+                <Calendar
+                  mode="single"
+                  selected={dueDate || undefined}
+                  onSelect={(date) => {
+                    setDueDate(date || null);
                     setIsCalendarOpen(false);
                   }}
-                  className="w-full text-center text-xs py-2 font-medium hover:bg-accent transition-colors rounded-b-md text-red-500 border-t border-border"
-                >
-                  Clear date
-                </button>
-              )}
-            </PopoverContent>
-          </Popover>
-
-          <Popover open={isPriorityOpen} onOpenChange={setIsPriorityOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:bg-accent",
-                  getPriorityClass(priority)
+                />
+                {dueDate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDueDate(null);
+                      setIsCalendarOpen(false);
+                    }}
+                    className="w-full rounded-b-md border-t border-border py-2 text-center text-xs font-medium text-red-500 transition-colors hover:bg-accent"
+                  >
+                    Clear date
+                  </button>
                 )}
-                aria-label="Set priority"
-              >
-                <Flag className={cn("h-4 w-4", priority > 0 && "fill-current")} />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-40 p-1 flex flex-col gap-0.5 animate-none" align="end">
-              {PRIORITIES.map((p) => (
+              </PopoverContent>
+            </Popover>
+
+            <Popover open={isPriorityOpen} onOpenChange={setIsPriorityOpen}>
+              <PopoverTrigger asChild>
                 <button
-                  key={p.value}
                   type="button"
-                  onClick={() => {
-                    setPriority(p.value);
-                    setIsPriorityOpen(false);
-                  }}
                   className={cn(
-                    "flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm rounded-md transition-colors hover:bg-accent",
-                    priority === p.value ? "bg-accent/80 font-medium" : ""
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-accent",
+                    getPriorityClass(priority)
                   )}
+                  aria-label="Set priority"
                 >
-                  <Flag className={cn("h-3.5 w-3.5", p.value > 0 && "fill-current", p.color)} />
-                  <span className="text-xs text-foreground font-medium">{p.label}</span>
+                  <Flag className={cn("h-4 w-4", priority > 0 && "fill-current")} />
                 </button>
-              ))}
-            </PopoverContent>
-          </Popover>
+              </PopoverTrigger>
+              <PopoverContent
+                className="flex w-40 flex-col gap-0.5 p-1 animate-none"
+                align="start"
+                sideOffset={8}
+              >
+                {PRIORITIES.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => {
+                      setPriority(p.value);
+                      setIsPriorityOpen(false);
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent",
+                      priority === p.value ? "bg-accent/80 font-medium" : ""
+                    )}
+                  >
+                    <Flag className={cn("h-3.5 w-3.5", p.value > 0 && "fill-current", p.color)} />
+                    <span className="text-xs font-medium text-foreground">{p.label}</span>
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
+          </div>
 
           <button
             type="submit"
             disabled={!value.trim() || isSubmitting}
             className={cn(
-              "flex h-9 items-center gap-1.5 rounded-xl px-4 text-sm font-medium transition-all duration-200",
+              "flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-4 text-sm font-medium transition-all duration-200",
               value.trim() && !isSubmitting
                 ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20 hover:bg-orange-600"
                 : "cursor-not-allowed bg-accent text-muted-foreground"
@@ -192,14 +204,13 @@ export function TaskInput({
             ) : (
               <Plus className="h-4 w-4" />
             )}
-
-            <span className="hidden sm:inline">Add</span>
+            <span>Add</span>
           </button>
         </div>
       </form>
 
-      {/* Suggestions */}
-      <div className="mt-5 flex flex-wrap justify-center gap-2">
+      {/* Suggestions: horizontal scroll on mobile, wraps on larger screens */}
+      <div className="mt-5 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar:none sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
         {taskSuggestions.map((task) => {
           const Icon = task.icon;
 
@@ -208,7 +219,7 @@ export function TaskInput({
               key={task.label}
               type="button"
               onClick={() => handleSuggestionClick(task.title)}
-              className="flex items-center gap-2 rounded-full border border-border/50 bg-background/70 px-4 py-2 text-sm text-muted-foreground transition-all hover:border-orange-500/30 hover:bg-accent hover:text-foreground"
+              className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-border/50 bg-background/70 px-4 py-2 text-sm text-muted-foreground transition-all hover:border-orange-500/30 hover:bg-accent hover:text-foreground"
             >
               <Icon className="h-4 w-4" />
               {task.label}
