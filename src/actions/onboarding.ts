@@ -53,8 +53,10 @@ export async function onBoardUser() {
       .filter(Boolean)
       .join(" ");
 
-  // Check if the user already exists
-  const existingUser = await db.query.users.findFirst({
+  // -------------------------------------------------------
+  // 1. Check by Clerk ID
+  // -------------------------------------------------------
+  let existingUser = await db.query.users.findFirst({
     where: eq(users.clerkId, userId),
   });
 
@@ -63,7 +65,33 @@ export async function onBoardUser() {
     return existingUser;
   }
 
-  // Create user
+  // -------------------------------------------------------
+  // 2. Check by Email (handles duplicate email issue)
+  // -------------------------------------------------------
+  existingUser = await db.query.users.findFirst({
+    where: eq(users.email, email),
+  });
+
+  if (existingUser) {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        clerkId: userId,
+        name,
+        imageUrl: clerkUser.imageUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, existingUser.id))
+      .returning();
+
+    await ensureInboxProject(updatedUser.id);
+
+    return updatedUser;
+  }
+
+  // -------------------------------------------------------
+  // 3. Create New User
+  // -------------------------------------------------------
   const [newUser] = await db
     .insert(users)
     .values({
@@ -86,11 +114,9 @@ export async function getCurrentUser() {
     return null;
   }
 
-  const user = await db.query.users.findFirst({
+  return await db.query.users.findFirst({
     where: eq(users.clerkId, userId),
   });
-
-  return user;
 }
 
 export async function getInboxProject(userId: string) {
