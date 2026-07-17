@@ -44,7 +44,7 @@ export function HomePageShell({ caveatClassName }: HomePageShellProps) {
         onProjectsChange={setProjects}
       />
 
-      <section className="relative z-10 flex min-h-screen items-center justify-center px-6">
+      <section className="relative z-10 flex min-h-screen items-center justify-center px-6 pb-60 sm:pb-60">
         <div className="w-full max-w-2xl text-center">
           <p className={`${caveatClassName ?? ""} mt-4 text-2xl text-muted-foreground`}>
             Turn ideas into completed tasks.
