@@ -68,6 +68,12 @@ export const tasks = pgTable("tasks", {
 
   dueDate: timestamp("due_date"),
 
+  totalTrackedMs: integer("total_tracked_ms").default(0).notNull(),
+
+  isTimerRunning: boolean("is_timer_running").default(false).notNull(),
+
+  timerStartedAt: timestamp("timer_started_at", { mode: "date", withTimezone: true }),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
