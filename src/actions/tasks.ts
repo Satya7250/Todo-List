@@ -7,18 +7,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { projects, tasks, users } from "@/db/schema";
 
-interface TaskRecordFromDb {
-  id: string;
-  userId: string;
-  projectId: string;
-  title: string;
-  description: string | null;
-  completed: boolean;
-  priority: number;
-  dueDate: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export type { TaskRecord, TaskRecordFromDb } from "@/lib/tasks";
+import { type TaskRecord, type TaskRecordFromDb, serializeTask } from "@/lib/tasks";
 
 interface TaskQueryOptions {
   projectId?: string | null;
@@ -29,17 +19,6 @@ export interface TaskActionResult<T> {
   data: T | null;
   error?: string;
   message?: string;
-}
-
-export interface TaskRecord {
-  id: string;
-  title: string;
-  description?: string | null;
-  completed: boolean;
-  priority: number;
-  dueDate?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 interface TaskUpdatePayload {
@@ -58,7 +37,7 @@ function createErrorResult<T>(error: string): TaskActionResult<T> {
   };
 }
 
-async function getCurrentUserData() {
+export async function getCurrentUserData() {
   const { userId } = await auth();
 
   if (!userId) {
@@ -78,18 +57,7 @@ async function getInboxProjectId(userId: string) {
   return inboxProject?.id ?? null;
 }
 
-function serializeTask(task: TaskRecordFromDb): TaskRecord {
-  return {
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    completed: task.completed,
-    priority: task.priority,
-    dueDate: task.dueDate ? task.dueDate.toISOString() : null,
-    createdAt: task.createdAt ? task.createdAt.toISOString() : undefined,
-    updatedAt: task.updatedAt ? task.updatedAt.toISOString() : undefined,
-  };
-}
+
 
 function normalizeDueDate(value: string | Date | null | undefined) {
   if (value === undefined || value === null || value === "") {
@@ -103,6 +71,30 @@ function normalizeDueDate(value: string | Date | null | undefined) {
   }
 
   return parsedDate;
+}
+
+const MAX_MS = 24 * 60 * 60 * 1000;
+
+export async function checkAndEnforce24HourLimit(task: TaskRecordFromDb): Promise<TaskRecordFromDb> {
+  if (task.isTimerRunning && task.timerStartedAt) {
+    const elapsed = Date.now() - new Date(task.timerStartedAt).getTime();
+    if (elapsed >= MAX_MS) {
+      const [updated] = await db
+        .update(tasks)
+        .set({
+          totalTrackedMs: task.totalTrackedMs + MAX_MS,
+          isTimerRunning: false,
+          timerStartedAt: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(tasks.id, task.id))
+        .returning();
+      if (updated) {
+        return updated as TaskRecordFromDb;
+      }
+    }
+  }
+  return task;
 }
 
 export async function getTasks(
@@ -130,9 +122,13 @@ export async function getTasks(
     .where(and(...whereClauses))
     .orderBy(desc(tasks.createdAt));
 
+  const validatedTasks = await Promise.all(
+    userTasks.map((t) => checkAndEnforce24HourLimit(t as TaskRecordFromDb))
+  );
+
   return {
     success: true,
-    data: userTasks.map((task) => serializeTask(task as TaskRecordFromDb)),
+    data: validatedTasks.map((task) => serializeTask(task)),
     message: "Tasks loaded successfully.",
   };
 }
@@ -302,10 +298,35 @@ export async function toggleTask(
     );
   }
 
+  const [existingTask] = await db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.id, id), eq(tasks.userId, currentUser.id)))
+    .limit(1);
+
+  if (!existingTask) {
+    return createErrorResult<TaskRecord | null>("Task not found.");
+  }
+
+  let totalTrackedMs = existingTask.totalTrackedMs;
+  let isTimerRunning = existingTask.isTimerRunning;
+  let timerStartedAt = existingTask.timerStartedAt;
+
+  if (completed && isTimerRunning && timerStartedAt) {
+    const elapsed = Date.now() - new Date(timerStartedAt).getTime();
+    const cappedElapsed = Math.min(elapsed, MAX_MS);
+    totalTrackedMs += cappedElapsed;
+    isTimerRunning = false;
+    timerStartedAt = null;
+  }
+
   const [updatedTask] = await db
     .update(tasks)
     .set({
       completed,
+      totalTrackedMs,
+      isTimerRunning,
+      timerStartedAt,
       updatedAt: new Date(),
     })
     .where(and(eq(tasks.id, id), eq(tasks.userId, currentUser.id)))
@@ -339,5 +360,33 @@ export async function deleteTask(
     success: true,
     data: null,
     message: "Task deleted successfully.",
+  };
+}
+
+export async function getTask(
+  id: string
+): Promise<TaskActionResult<TaskRecord | null>> {
+  const currentUser = await getCurrentUserData();
+
+  if (!currentUser) {
+    return createErrorResult<TaskRecord | null>("You must be signed in to view tasks.");
+  }
+
+  const [dbTask] = await db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.id, id), eq(tasks.userId, currentUser.id)))
+    .limit(1);
+
+  if (!dbTask) {
+    return createErrorResult<TaskRecord | null>("Task not found.");
+  }
+
+  const validatedTask = await checkAndEnforce24HourLimit(dbTask as TaskRecordFromDb);
+
+  return {
+    success: true,
+    data: serializeTask(validatedTask),
+    message: "Task loaded successfully.",
   };
 }
