@@ -278,10 +278,9 @@ export function TaskItem({
           ) : (
             <span
               className={cn(
-                "min-w-0 flex-1 break-words pt-0.5 text-foreground cursor-pointer",
+                "min-w-0 flex-1 wrap-break-word pt-0.5 text-foreground",
                 todo.completed && "text-muted-foreground line-through"
               )}
-              onClick={startEditing}
             >
               {todo.title}
             </span>
@@ -296,7 +295,7 @@ export function TaskItem({
                 variant="ghost"
                 size="sm"
                 disabled={isDeleting}
-                className="h-9 w-9 shrink-0 rounded-full border border-border/50 bg-background/60 p-0 text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="h-7 w-7 shrink-0 rounded-full border border-border/50 bg-background/60 p-0 text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
@@ -340,13 +339,26 @@ export function TaskItem({
               <span>{new Date(todo.dueDate).toLocaleDateString()}</span>
             </div>
           )}
-          {todo.priority > 0 && (
+          {/* {todo.priority > 0 && (
             <div className="flex items-center gap-1">
               <span>
                 {PRIORITIES.find((p) => p.value === todo.priority)?.label} Priority
               </span>
             </div>
-          )}
+          )} */}
+          {todo.priority > 0 && (
+  <div
+    className="flex items-center gap-1"
+    title={`${PRIORITIES.find((p) => p.value === todo.priority)?.label} Priority`}
+  >
+    <FlagIcon
+      className={cn(
+        "h-3.5 w-3.5 fill-current",
+        getPriorityClass(todo.priority)
+      )}
+    />
+  </div>
+)}
         </div>
       </div>
     </li>

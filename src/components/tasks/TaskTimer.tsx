@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Clock3, Play, Pause, RefreshCw, Loader2 } from "lucide-react";
+import { AlarmClock, Play, Pause, RefreshCw, Loader2 } from "lucide-react";
 
 import { formatMs, getDisplayMs } from "../../lib/timer";
 import { type TaskRecord } from "@/actions/tasks";
@@ -73,12 +73,12 @@ export default function TaskTimer({ task }: { task: TaskRecord }) {
         disabled={pendingAction !== null || locked}
         title={locked ? "Task is completed" : title}
         aria-label={locked ? "Task is completed" : title}
-        className={`flex h-9 w-9 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50 ${
+        className={`flex h-6 w-6 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50 ${
           locked ? "border-border/50 bg-accent/40 text-muted-foreground" : colorClasses
         }`}
       >
         {pendingAction === action ? (
-          <Loader2 size={16} className="animate-spin" />
+          <Loader2 size={14} className="animate-spin" />
         ) : (
           icon
         )}
@@ -92,7 +92,7 @@ export default function TaskTimer({ task }: { task: TaskRecord }) {
     if (notStarted) {
       return iconButton(
         "start",
-        <Play size={16} fill="currentColor" />,
+        <Play size={14} fill="currentColor" />,
         "Start",
         "border-green-500/30 bg-green-500/10 text-green-500 hover:bg-green-500/20"
       );
@@ -103,13 +103,13 @@ export default function TaskTimer({ task }: { task: TaskRecord }) {
         <div className="flex items-center gap-2">
           {iconButton(
             "pause",
-            <Pause size={16} fill="currentColor" />,
+            <Pause size={14} fill="currentColor" />,
             "Pause",
-            "border-yellow-500/30 bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20"
+            "border-orange-500/30 bg-orangee-500/10 text-yellow-500/50 hover:bg-yellow-500/10"
           )}
           {iconButton(
             "restart",
-            <RefreshCw size={16} />,
+            <RefreshCw size={14} />,
             "Restart",
             "border-blue-500/30 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"
           )}
@@ -122,13 +122,13 @@ export default function TaskTimer({ task }: { task: TaskRecord }) {
       <div className="flex items-center gap-2">
         {iconButton(
           "resume",
-          <Play size={16} fill="currentColor" />,
+          <Play size={14} fill="currentColor" />,
           "Resume",
-          "border-green-500/30 bg-green-500/10 text-green-500 hover:bg-green-500/20"
+          "border-orange-500/30 bg-orange-500/10 text-orange-500/40 hover:bg-orange-500/20"
         )}
         {iconButton(
           "restart",
-          <RefreshCw size={16} />,
+          <RefreshCw size={14} />,
           "Restart",
           "border-blue-500/30 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"
         )}
@@ -141,7 +141,7 @@ export default function TaskTimer({ task }: { task: TaskRecord }) {
       <div className="flex items-center gap-4">
         {/* Status + Timer */}
         <div className="flex items-center gap-2">
-          <span
+          {/* <span
             className={`h-2 w-2 rounded-full ${
               currentTask.isTimerRunning
                 ? "bg-green-500"
@@ -149,8 +149,8 @@ export default function TaskTimer({ task }: { task: TaskRecord }) {
                   ? "bg-yellow-500"
                   : "bg-gray-400"
             }`}
-          />
-          <Clock3 className="h-4 w-4 text-muted-foreground" />
+          /> */}
+          <AlarmClock className="h-4 w-4 text-muted-foreground" />
           <span
             className={`font-mono text-sm font-semibold ${
               currentTask.isTimerRunning ? "text-green-500" : "text-muted-foreground"
